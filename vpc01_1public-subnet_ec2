@@ -203,20 +203,21 @@
                 "PortRange" : {"From" : "0", "To" : "65535"}
             }
         },
+        "EIP01" : {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Domain" : "VPC01",
+                "InstanceId" : { "Ref" : "EC2instance" }
+            }
+        },
         "EC2instance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
+                "KeyName" : { "Ref" : "KeyName" },
                 "SecurityGroupIds" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "ImageId" : { "Fn::FindInMap" : [ "InstanceAMI", { "Ref" : "AWS::Region" }, "64"]},
                 "InstanceType" : { "Ref" : "InstanceType" },
-                "SubnetId": { "Ref": "PublicSubnet01" },
-                "NetworkInterfaces" : [{
-                    "AssociatePublicIpAddress" : "True",
-                    "DeleteOnTermination" : "True",
-                    "SubnetId" : { "Ref" : "PublicSubnet01" },
-                    "DeviceIndex" : "0",
-                    "GroupSet" : [ { "Ref" : "InstanceSecurityGroup" } ]
-                }]
+                "SubnetId": { "Ref": "PublicSubnet01" }
             }
         }
     }
