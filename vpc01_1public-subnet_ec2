@@ -5,7 +5,7 @@
         "KeyName" : {
             "Description" : "EC2 Key Pair for SSH Access",
             "Type" : "String",
-            "Default" : "ec2key",
+            "Default" : "EC2key",
             "MinLength": "1",
             "MaxLength": "64",
             "AllowedPattern" : "[-_ a-zA-Z0-9]*",
@@ -179,7 +179,7 @@
                 "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
             }
         },
-        "InboundHTTPPublicNetworkAclEntry" : {
+        "InboundPublicNetworkAclEntry" : {
             "Type" : "AWS::EC2::NetworkAclEntry",
             "Properties" : {
                 "NetworkAclId" : {"Ref" : "PublicNetworkAcl"},
@@ -191,22 +191,7 @@
                 "PortRange" : {"From" : "0", "To" : "65535"}
             }
         },
-        "InboundDynamicPortsPublicNetworkAclEntry" : {
-            "Type" : "AWS::EC2::NetworkAclEntry",
-            "Properties" : {
-                "NetworkAclId" : {"Ref" : "PublicNetworkAcl"},
-                "RuleNumber" : "101",
-                "Protocol" : "6",
-                "RuleAction" : "allow",
-                "Egress" : "false",
-                "CidrBlock" : "0.0.0.0/0",
-                "PortRange" : [
-                    {"From" : "1024", "To" : "65535"},
-                    {"From" : "22", "To" : "22"}
-                    ]
-            }
-        },
-        "OutboundHTTPPublicNetworkAclEntry" : {
+        "OutboundPublicNetworkAclEntry" : {
             "Type" : "AWS::EC2::NetworkAclEntry",
             "Properties" : {
                 "NetworkAclId" : {"Ref" : "PublicNetworkAcl"},
@@ -215,31 +200,23 @@
                 "RuleAction" : "allow",
                 "Egress" : "true",
                 "CidrBlock" : "0.0.0.0/0",
-                "PortRange" : [
-                    {"From" : "80", "To" : "80"},
-                    {"From" : "22", "To" : "22"}
-                    ]
-            }
-        },
-        "OutBoundDynamicPortPublicNetworkAclEntry" : {
-            "Type" : "AWS::EC2::NetworkAclEntry",
-            "Properties" : {
-                "NetworkAclId" : {"Ref" : "PublicNetworkAcl"},
-                "RuleNumber" : "101",
-                "Protocol" : "6",
-                "RuleAction" : "allow",
-                "Egress" : "true",
-                "CidrBlock" : "0.0.0.0/0",
-                "PortRange" : {"From" : "1024", "To" : "65535"}
+                "PortRange" : {"From" : "0", "To" : "65535"}
             }
         },
         "EC2instance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "SecurityGroupIds" : [ { "Ref" : "InstanceSecurityGroup" } ],
-                "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "64"]},
+                "ImageId" : { "Fn::FindInMap" : [ "InstanceAMI", { "Ref" : "AWS::Region" }, "64"]},
                 "InstanceType" : { "Ref" : "InstanceType" },
-                "SubnetId": { "Ref": "PublicSubnet01" }
+                "SubnetId": { "Ref": "PublicSubnet01" },
+                "NetworkInterfaces" : [{
+                    "AssociatePublicIpAddress" : "True",
+                    "DeleteOnTermination" : "True",
+                    "SubnetId" : { "Ref" : "PublicSubnet01" },
+                    "DeviceIndex" : "0",
+                    "GroupSet" : [ { "Ref" : "InstanceSecurityGroup" } ]
+                }]
             }
         }
     }
