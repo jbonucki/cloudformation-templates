@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "AWS CloudFormation Template for a multi-AZ WorPress deployment & multi-AZ RDS deployment",
+    "Description": "AWS CloudFormation Template for 1 VPC, 1 internet gateway, 2 public subnet and 2 private subnets. No routes are created",
     "Parameters": {
         
     },
