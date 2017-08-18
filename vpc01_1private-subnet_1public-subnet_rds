@@ -1,0 +1,136 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template for a multi-AZ WorPress deployment & multi-AZ RDS deployment",
+    "Parameters": {"DBClass": {
+            "Description": "Database instance class",
+            "Type": "String",
+            "Default": "db.t2.micro",
+            "AllowedValues": [
+                "db.t2.micro",
+                "db.m3.medium",
+                "db.m3.large",
+                "db.m3.xlarge",
+                "db.m3.2xlarge",
+                "db.m4.large",
+                "db.m4.xlarge",
+                "db.r3.large",
+                "db.r3.xlarge",
+                "db.r3.2xlarge"
+            ],
+            "ConstraintDescription": "must select a valid database instance type."
+        },
+        "DBName": {
+            "Default": "wordpressdb",
+            "Description": "The WordPress database name",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "64",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBUser": {
+            "NoEcho": "true",
+            "Description": "The WordPress database admin account username",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "16",
+            "Default": "admin",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBPassword": {
+            "NoEcho": "true",
+            "Description": "The WordPress database admin account password",
+            "Type": "String",
+            "MinLength": "8",
+            "MaxLength": "41",
+            "Default": "trinimbus",
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "ConstraintDescription": "must contain only alphanumeric characters."
+        },
+        "MultiAZDatabase": {
+            "Default": "true",
+            "Description": "Create a Multi-AZ MySQL Amazon RDS database instance",
+            "Type": "String",
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "ConstraintDescription": "must be either true or false."
+        },
+        "DBAllocatedStorage": {
+            "Default": "5",
+            "Description": "The size of the database (Gb)",
+            "Type": "Number",
+            "MinValue": "5",
+            "MaxValue": "1024",
+            "ConstraintDescription": "must be between 5 and 1024Gb."
+        }
+    },
+    "Resources": {
+     "VPC01": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.1.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicSubnet01": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "VPC01" },
+                "CidrBlock": "10.1.1.0/24",
+                "AvailabilityZone": "us-east-1a",
+                "Tags" : [ { "Key" : "Network", "Value" : "Public" } ]
+            }
+        },
+        "PrivateSubnet01": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "VPC01" },
+                "CidrBlock": "10.1.2.0/24",
+                "AvailabilityZone": "us-east-1a",
+                "Tags" : [ { "Key" : "Network", "Value" : "Private" } ]
+            }
+        },
+    "DBSubnetGroup" : {
+            "Type" : "AWS::RDS::DBSubnetGroup",
+            "Properties" : {
+                "DBSubnetGroupDescription" : "Subnets the database will span",
+                "SubnetIds" : [ "PrivateSubnet01" ],
+                "Tags" : [ {"Key" : "Network", "Value" : "Private"} ]
+            }
+        },
+        "DBSecurityGroup": {
+            "Type": "AWS::RDS::DBSecurityGroup",
+            "Properties": {
+                "EC2VpcId" : { "Ref" : "VPC01" },
+                "DBSecurityGroupIngress": {
+                    "EC2SecurityGroupId": { "Ref": "InstanceSecurityGroup" }
+                },
+                "GroupDescription": "database access"
+            }
+        },
+        "DBInstance" : {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBName"            : { "Ref" : "DBName" },
+                "Engine"            : "MySQL",
+                "MultiAZ"           : { "Ref": "MultiAZDatabase" },
+                "MasterUsername"    : { "Ref" : "DBUser" },
+                "MasterUserPassword": { "Ref" : "DBPassword" },
+                "DBInstanceClass"   : { "Ref" : "DBClass" },
+                "DBSubnetGroupName" : { "Ref" : "DBSubnetGroup" },
+                "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
+                "DBSecurityGroups": [ { "Ref" : "DBSecurityGroup" } ]
+            }
+        }
+     }
+}
