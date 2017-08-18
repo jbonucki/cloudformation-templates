@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "AWS CloudFormation Template for a multi-AZ WorPress deployment & multi-AZ RDS deployment",
+    "Description": "AWS CloudFormation Template for 1 VPC, 1, internet gateway, 1 public subnet, 1 private subnet & multi-AZ RDS deployment",
     "Parameters": {"DBClass": {
             "Description": "Database instance class",
             "Type": "String",
@@ -49,7 +49,7 @@
             "ConstraintDescription": "must contain only alphanumeric characters."
         },
         "MultiAZDatabase": {
-            "Default": "true",
+            "Default": "false",
             "Description": "Create a Multi-AZ MySQL Amazon RDS database instance",
             "Type": "String",
             "AllowedValues": [
@@ -100,7 +100,7 @@
                 "Tags" : [ { "Key" : "Network", "Value" : "Private" } ]
             }
         },
-    "DBSubnetGroup" : {
+        "DBSubnetGroup" : {
             "Type" : "AWS::RDS::DBSubnetGroup",
             "Properties" : {
                 "DBSubnetGroupDescription" : "Subnets the database will span",
@@ -130,6 +130,25 @@
                 "DBSubnetGroupName" : { "Ref" : "DBSubnetGroup" },
                 "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
                 "DBSecurityGroups": [ { "Ref" : "DBSecurityGroup" } ]
+            }
+        },
+        "InstanceSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "Allow http to client host",
+                "VpcId" : {"Ref" : "VPC01"},
+                "SecurityGroupIngress" : [{
+                    "IpProtocol" : "tcp",
+                    "FromPort" : "80",
+                    "ToPort" : "80",
+                    "CidrIp" : "0.0.0.0/0"
+                }],
+                "SecurityGroupEgress" : [{
+                    "IpProtocol" : "tcp",
+                    "FromPort" : "80",
+                    "ToPort" : "80",
+                    "CidrIp" : "0.0.0.0/0"
+                }]
             }
         }
      }
