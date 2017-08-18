@@ -9,14 +9,6 @@
             "Type": "AWS::EC2::VPC",
             "Properties": {
                 "CidrBlock": "10.1.0.0/16",
-                "Tags": [
-                    {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
-                    }
-                ]
             }
         },
         "PublicSubnet01": {
