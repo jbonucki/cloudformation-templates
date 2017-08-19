@@ -1,0 +1,425 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template for 1 VPC, 1 internet gateway, 2 public subnets, 2 private subnets, multi-az rds in the private subnet with nat gateways & multi-az ec2 with load balancer in the public subnet.",
+    "Parameters": {
+        "KeyName" : {
+            "Description" : "EC2 Key Pair for SSH Access",
+            "Type" : "String",
+            "Default" : "EC2key",
+            "MinLength": "1",
+            "MaxLength": "64",
+            "AllowedPattern" : "[-_ a-zA-Z0-9]*",
+            "ConstraintDescription" : "can contain only alphanumeric characters, spaces, dashes and underscores."
+        },
+        "SSHLocation": {
+            "Description": " The IP address range that can be used to SSH to the EC2 instances",
+            "Type": "String",
+            "MinLength": "9",
+            "MaxLength": "18",
+            "Default": "0.0.0.0/0",
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+        },
+        "InstanceType" : {
+            "Description" : "Select EC2 instance type:",
+            "Type" : "String",
+            "Default" : "t2.micro",
+            "AllowedValues" : [
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "t2.xlarge",
+                "t2.2xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "m4.16xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "r4.large",
+                "r4.xlarge",
+                "r4.2xlarge",
+                "r4.4xlarge",
+                "r4.8xlarge",
+                "r4.16xlarge",
+                "x1.16xlarge",
+                "x1.32xlarge",
+                "f1.2xlarge",
+                "f1.16xlarge",
+                "g3.4xlarge",
+                "g3.8xlarge",
+                "g3.16xlarge",
+                "p2.xlarge",
+                "p2.8xlarge",
+                "p2.16xlarge",
+                "d2.xlarge",
+                "d2.2xlarge",
+                "d2.4xlarge",
+                "d2.8xlarge",
+                "i3.large",
+                "i3.xlarge",
+                "i3.2xlarge",
+                "i3.4xlarge",
+                "i3.8xlarge",
+                "i3.16xlarge"
+                ],
+                "ConstraintDescription" : "must be a valid EC2 instance type."
+        },
+        "DBClass": {
+            "Description": "Database instance class:",
+            "Type": "String",
+            "Default": "db.t2.micro",
+            "AllowedValues": [
+                "db.t2.micro",
+                "db.t2.small",
+                "db.t2.medium",
+                "db.t2.large",
+                "db.m3.medium",
+                "db.m3.large",
+                "db.m3.xlarge",
+                "db.m3.2xlarge",
+                "db.m4.large",
+                "db.m4.xlarge",
+                "db.m4.2xlarge",
+                "db.m4.4xlarge",
+                "db.m4.10xlarge",
+                "db.r3.large",
+                "db.r3.xlarge",
+                "db.r3.2xlarge",
+                "db.r3.4xlarge",
+                "db.r3.8xlarge"
+            ],
+            "ConstraintDescription": "must select a valid database instance type."
+        },
+        "DBName": {
+            "Default": "database",
+            "Description": "The name of database:",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "64",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBUser": {
+            "Description": "The database admin account username:",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "16",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBPassword": {
+            "NoEcho": "true",
+            "Description": "The database admin account password:",
+            "Type": "String",
+            "MinLength": "8",
+            "MaxLength": "41",
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "ConstraintDescription": "must contain only alphanumeric characters."
+        },
+        "MultiAZDatabase": {
+            "Default": "false",
+            "Description": "Create a Multi-AZ database instance?",
+            "Type": "String",
+            "AllowedValues": [
+                "true",
+                "false"
+            ],
+            "ConstraintDescription": "must be either true or false."
+        },
+        "DBAllocatedStorage": {
+            "Default": "5",
+            "Description": "The size of the database (Gb):",
+            "Type": "Number",
+            "MinValue": "5",
+            "MaxValue": "1024",
+            "ConstraintDescription": "must be between 5 and 1024Gb."
+        }
+    },
+    "Mappings": {
+        "InstanceAMI" : {
+            "us-east-1" : { "64" : "ami-4fffc834" }
+        }
+    },
+    "Resources": {
+        "VPC01": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.1.0.0/16"
+            }
+        },
+        "InternetGateway" : {
+            "Type" : "AWS::EC2::InternetGateway",
+            "Properties" : {
+                "Tags" : [{"Key" : "Network", "Value" : "Public" }]
+            }
+        },
+        "AttachGateway" : {
+            "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties" : {
+                "VpcId" : { "Ref" : "VPC01" },
+                "InternetGatewayId" : { "Ref" : "InternetGateway" }
+            }
+        },
+        "NAT01" : {
+            "DependsOn" : "AttachGateway",
+            "Type" : "AWS::EC2::NatGateway",
+            "Properties" : {
+                "AllocationId" : { "Fn::GetAtt" : ["EIPNAT01", "AllocationId"]},
+                "SubnetId" : { "Ref" : "PrivateSubnet01"}
+            }
+        },
+        "NAT02" : {
+            "DependsOn" : "AttachGateway",
+            "Type" : "AWS::EC2::NatGateway",
+            "Properties" : {
+                "AllocationId" : { "Fn::GetAtt" : ["EIPNAT02", "AllocationId"]},
+                "SubnetId" : { "Ref" : "PrivateSubnet01"}
+            }
+        },
+        "EIPNAT01" : {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Domain" : "VPC01"
+            }
+        },
+        "EIPNAT02" : {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Domain" : "VPC01"
+            }
+        },
+        "PublicSubnet01": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "VPC01" },
+                "CidrBlock": "10.1.1.0/24",
+                "AvailabilityZone": "us-east-1a",
+                "Tags" : [ { "Key" : "Network", "Value" : "Public" } ]
+            }
+        },
+        "PublicSubnet02": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "VPC01" },
+                "CidrBlock": "10.1.2.0/24",
+                "AvailabilityZone": "us-east-1b",
+                "Tags" : [ { "Key" : "Network", "Value" : "Public" } ]
+            }
+        },
+        "PublicRouteTable" : {
+            "Type" : "AWS::EC2::RouteTable",
+            "Properties" : {
+                "VpcId" : {"Ref" : "VPC01"},
+                "Tags" : [{"Key" : "Network", "Value" : "Public" }]
+            }
+        },
+        "PublicRoute" : {
+            "Type" : "AWS::EC2::Route",
+            "DependsOn" : "AttachGateway",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "PublicRouteTable" },
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref" : "InternetGateway" }
+            }
+        },
+        "PublicSubnetRouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PublicSubnet01" },
+                "RouteTableId" : { "Ref" : "PublicRouteTable" }
+            }
+        },
+        "PublicNetworkAcl" : {
+            "Type" : "AWS::EC2::NetworkAcl",
+            "Properties" : {
+                "VpcId" : {"Ref" : "VPC01"},
+                "Tags" : [{"Key" : "Network", "Value" : "Public" }]
+            }
+        },
+        "PublicSubnetNetworkAclAssociation" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PublicSubnet01" },
+                "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+            }
+        },
+        "InboundPublicNetworkAclEntry" : {
+            "Type" : "AWS::EC2::NetworkAclEntry",
+            "Properties" : {
+                "NetworkAclId" : {"Ref" : "PublicNetworkAcl"},
+                "RuleNumber" : "100",
+                "Protocol" : "6",
+                "RuleAction" : "allow",
+                "Egress" : "false",
+                "CidrBlock" : "0.0.0.0/0",
+                "PortRange" : {"From" : "0", "To" : "65535"}
+            }
+        },
+        "OutboundPublicNetworkAclEntry" : {
+            "Type" : "AWS::EC2::NetworkAclEntry",
+            "Properties" : {
+                "NetworkAclId" : {"Ref" : "PublicNetworkAcl"},
+                "RuleNumber" : "100",
+                "Protocol" : "6",
+                "RuleAction" : "allow",
+                "Egress" : "true",
+                "CidrBlock" : "0.0.0.0/0",
+                "PortRange" : {"From" : "0", "To" : "65535"}
+            }
+        },
+        "PrivateSubnet01": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "VPC01" },
+                "CidrBlock": "10.1.3.0/24",
+                "AvailabilityZone": "us-east-1a",
+                "Tags" : [ { "Key" : "Network", "Value" : "Private" } ]
+            }
+        },
+        "PrivateSubnet02": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": { "Ref": "VPC01" },
+                "CidrBlock": "10.1.4.0/24",
+                "AvailabilityZone": "us-east-1b",
+                "Tags" : [ { "Key" : "Network", "Value" : "Private" } ]
+            }
+        },
+        "PrivateRouteTable" : {
+            "Type" : "AWS::EC2::RouteTable",
+            "Properties" : {
+                "VpcId" : {"Ref" : "VPC01"},
+                "Tags" : [{"Key" : "Network", "Value" : "Private" }]
+            }
+        },
+        "PrivateRoute" : {
+            "Type" : "AWS::EC2::Route",
+            "DependsOn" : "AttachGateway",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "PrivateRouteTable" },
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref" : "NAT" }
+            }
+        },
+        "PrivateSubnetRouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PrivateSubnet01" },
+                "RouteTableId" : { "Ref" : "PrivateRouteTable" }
+            }
+        },
+        "PrivateNetworkAcl" : {
+            "Type" : "AWS::EC2::NetworkAcl",
+            "Properties" : {
+                "VpcId" : {"Ref" : "VPC01"},
+                "Tags" : [{"Key" : "Network", "Value" : "Private" }]
+            }
+        },
+        "PrivateSubnetNetworkAclAssociation" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PrivateSubnet01" },
+                "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+            }
+        },
+        "InboundPrivateNetworkAclEntry" : {
+            "Type" : "AWS::EC2::NetworkAclEntry",
+            "Properties" : {
+                "NetworkAclId" : {"Ref" : "PrivateNetworkAcl"},
+                "RuleNumber" : "100",
+                "Protocol" : "6",
+                "RuleAction" : "allow",
+                "Egress" : "false",
+                "CidrBlock" : "0.0.0.0/0",
+                "PortRange" : {"From" : "0", "To" : "65535"}
+            }
+        },
+        "OutboundPrivateNetworkAclEntry" : {
+            "Type" : "AWS::EC2::NetworkAclEntry",
+            "Properties" : {
+                "NetworkAclId" : {"Ref" : "PrivateNetworkAcl"},
+                "RuleNumber" : "100",
+                "Protocol" : "6",
+                "RuleAction" : "allow",
+                "Egress" : "true",
+                "CidrBlock" : "0.0.0.0/0",
+                "PortRange" : {"From" : "0", "To" : "65535"}
+            }
+        },
+        "DBSubnetGroup" : {
+            "Type" : "AWS::RDS::DBSubnetGroup",
+            "Properties" : {
+                "DBSubnetGroupDescription" : "Subnets the database will span",
+                "SubnetIds" : [ "PrivateSubnet01" ],
+                "Tags" : [ {"Key" : "Network", "Value" : "Private"} ]
+            }
+        },
+        "DBSecurityGroup": {
+            "Type": "AWS::RDS::DBSecurityGroup",
+            "Properties": {
+                "EC2VpcId" : { "Ref" : "VPC01" },
+                "DBSecurityGroupIngress": {
+                    "EC2SecurityGroupId": { "Ref": "InstanceSecurityGroup" }
+                },
+                "GroupDescription": "database access"
+            }
+        },
+        "DBInstance" : {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBName"            : { "Ref" : "DBName" },
+                "Engine"            : "MySQL",
+                "MultiAZ"           : { "Ref": "MultiAZDatabase" },
+                "MasterUsername"    : { "Ref" : "DBUser" },
+                "MasterUserPassword": { "Ref" : "DBPassword" },
+                "DBInstanceClass"   : { "Ref" : "DBClass" },
+                "DBSubnetGroupName" : { "Ref" : "DBSubnetGroup" },
+                "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
+                "DBSecurityGroups": [ { "Ref" : "DBSecurityGroup" } ]
+            }
+        },
+        "InstanceSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "Allow http traffic in/out of client host",
+                "VpcId" : {"Ref" : "VPC01"},
+                "SecurityGroupIngress" : 
+                [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : "22",
+                        "ToPort" : "22",
+                        "CidrIp" : "0.0.0.0/0"},
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : "80",
+                        "ToPort" : "80",
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+                ]
+            }
+        }
+     }
+}
