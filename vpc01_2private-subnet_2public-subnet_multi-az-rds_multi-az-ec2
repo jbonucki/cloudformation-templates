@@ -139,7 +139,7 @@
             "ConstraintDescription": "must contain only alphanumeric characters."
         },
         "MultiAZDatabase": {
-            "Default": "false",
+            "Default": "true",
             "Description": "Create a Multi-AZ database instance?",
             "Type": "String",
             "AllowedValues": [
@@ -195,7 +195,7 @@
             "Type" : "AWS::EC2::NatGateway",
             "Properties" : {
                 "AllocationId" : { "Fn::GetAtt" : ["EIPNAT02", "AllocationId"]},
-                "SubnetId" : { "Ref" : "PrivateSubnet01"}
+                "SubnetId" : { "Ref" : "PrivateSubnet02"}
             }
         },
         "EIPNAT01" : {
@@ -244,10 +244,17 @@
                 "GatewayId" : { "Ref" : "InternetGateway" }
             }
         },
-        "PublicSubnetRouteTableAssociation" : {
+        "PublicSubnetRouteTableAssociation01" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
                 "SubnetId" : { "Ref" : "PublicSubnet01" },
+                "RouteTableId" : { "Ref" : "PublicRouteTable" }
+            }
+        },
+        "PublicSubnetRouteTableAssociation02" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PublicSubnet02" },
                 "RouteTableId" : { "Ref" : "PublicRouteTable" }
             }
         },
@@ -258,10 +265,17 @@
                 "Tags" : [{"Key" : "Network", "Value" : "Public" }]
             }
         },
-        "PublicSubnetNetworkAclAssociation" : {
+        "PublicSubnetNetworkAclAssociation01" : {
             "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
             "Properties" : {
                 "SubnetId" : { "Ref" : "PublicSubnet01" },
+                "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+            }
+        },
+        "PublicSubnetNetworkAclAssociation02" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PublicSubnet02" },
                 "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
             }
         },
@@ -372,7 +386,7 @@
             "Type" : "AWS::RDS::DBSubnetGroup",
             "Properties" : {
                 "DBSubnetGroupDescription" : "Subnets the database will span",
-                "SubnetIds" : [ "PrivateSubnet01" ],
+                "SubnetIds" : [ "PrivateSubnet01, PrivateSubnet02" ],
                 "Tags" : [ {"Key" : "Network", "Value" : "Private"} ]
             }
         },
