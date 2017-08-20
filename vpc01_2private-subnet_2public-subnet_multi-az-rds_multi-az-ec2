@@ -328,20 +328,36 @@
                 "Tags" : [{"Key" : "Network", "Value" : "Private" }]
             }
         },
-        "PrivateRoute" : {
+        "PrivateRoute01" : {
             "Type" : "AWS::EC2::Route",
             "DependsOn" : "AttachGateway",
             "Properties" : {
                 "RouteTableId" : { "Ref" : "PrivateRouteTable" },
                 "DestinationCidrBlock" : "0.0.0.0/0",
-                "GatewayId" : { "Ref" : "NAT" }
+                "GatewayId" : { "Ref" : "NAT01" }
             }
         },
-        "PrivateSubnetRouteTableAssociation" : {
+        "PrivateRoute02" : {
+            "Type" : "AWS::EC2::Route",
+            "DependsOn" : "AttachGateway",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "PrivateRouteTable" },
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref" : "NAT02" }
+            }
+        },
+        "PrivateSubnetRouteTableAssociation01" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
                 "SubnetId" : { "Ref" : "PrivateSubnet01" },
-                "RouteTableId" : { "Ref" : "PrivateRouteTable" }
+                "RouteTableId" : { "Ref" : "PrivateRouteTable01" }
+            }
+        },
+        "PrivateSubnetRouteTableAssociation02" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PrivateSubnet01" },
+                "RouteTableId" : { "Ref" : "PrivateRouteTable02" }
             }
         },
         "PrivateNetworkAcl" : {
@@ -351,10 +367,17 @@
                 "Tags" : [{"Key" : "Network", "Value" : "Private" }]
             }
         },
-        "PrivateSubnetNetworkAclAssociation" : {
+        "PrivateSubnetNetworkAclAssociation01" : {
             "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
             "Properties" : {
                 "SubnetId" : { "Ref" : "PrivateSubnet01" },
+                "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+            }
+        },
+        "PrivateSubnetNetworkAclAssociation02" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PrivateSubnet02" },
                 "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
             }
         },
